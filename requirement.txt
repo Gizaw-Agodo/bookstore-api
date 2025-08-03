@@ -1,2 +1,9 @@
 fastapi 
 uvicorn 
+asyncpg
+pydantic-settings
+sqlmodel
+greenlet
+alembic
+passlib
+bcrypt
