@@ -2,17 +2,19 @@ from fastapi import APIRouter, status, Depends
 from typing import List 
 from app.models.book import Book
 from app.services.book_service import BookService
-from app.core.dependencies import get_book_service
+from app.core.dependencies import get_book_service, get_current_user
 from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.database import get_session
 from app.schemas.books import BookCreate, BookUpdate
+from app.models.user import User
 
 book_router = APIRouter()
 
 @book_router.get('/', response_model=List[Book], status_code= status.HTTP_200_OK)
 async def get_books(
     book_service : BookService = Depends(get_book_service),
-    db : AsyncSession = Depends(get_session)
+    db : AsyncSession = Depends(get_session), 
+    current_user : User = Depends(get_current_user)
     ):
         books = await book_service.get_all_books(db)
         return books
