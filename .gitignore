@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.so
+
+reservoenv/
+.env
+.env.*
+
+*.log
+.vscode/
+**/node_modules/
+**/.DS_Store
