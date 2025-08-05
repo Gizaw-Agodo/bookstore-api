@@ -1,6 +1,8 @@
 from sqlmodel import SQLModel, Field
 from uuid import uuid4, UUID
 from datetime import datetime, timezone
+from sqlalchemy import Column, DateTime
+
 
 class User(SQLModel, table = True):
     id : UUID = Field(default_factory=uuid4, primary_key=True, index=True)
@@ -9,5 +11,12 @@ class User(SQLModel, table = True):
     first_name : str = Field(nullable=True)
     last_name : str = Field(nullable=True)
     is_verified : bool = Field(default=False)
-    created_at : datetime = Field(default_factory = lambda:datetime.now(timezone.utc), nullable=False)
-    updated_at : datetime = Field(default_factory = lambda:datetime.now(timezone.utc), nullable=False)
+    password_hash:str = Field(exclude=True)
+    
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
+    updated_at : datetime = Field(
+        default_factory = lambda:datetime.now(timezone.utc),  
+        sa_column=Column(DateTime(timezone=True), nullable=False))
