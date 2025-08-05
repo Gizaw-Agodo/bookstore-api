@@ -7,3 +7,4 @@ greenlet
 alembic
 passlib
 bcrypt
+python-jose
