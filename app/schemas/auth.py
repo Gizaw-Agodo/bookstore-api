@@ -13,3 +13,6 @@ class UserLoginModel(BaseModel):
 
 class RefreshTokenRequestModel(BaseModel):
     refresh_token : str
+
+class RevokeTokenRequestModel(BaseModel):
+    access_token : str
