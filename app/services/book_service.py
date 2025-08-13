@@ -3,6 +3,7 @@ from sqlmodel import select, desc
 from app.models.book import Book
 from app.schemas.books import BookCreate, BookUpdate
 from fastapi import HTTPException, status
+from uuid import UUID
 
 class BookService : 
     async def get_all_books(self, db: AsyncSession ):
@@ -15,10 +16,10 @@ class BookService :
         result = await db.exec(statement)
         return result.first()
     
-    async def create_book(self, db : AsyncSession, book_data : BookCreate):
+    async def create_book(self, db : AsyncSession, book_data : BookCreate, user_id : UUID):
         book_data_dict = book_data.model_dump()
         new_book = Book(**book_data_dict)
-
+        new_book.user_id = user_id
         db.add(new_book)
         await db.commit()
         return new_book
