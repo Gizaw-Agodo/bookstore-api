@@ -7,6 +7,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from app.core.security import verify_access_token
 from app.core.redis import token_in_blocklist
+from app.services.user_service import UserService
  
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/api/v1/auth/login ')
@@ -14,13 +15,16 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/api/v1/auth/login ')
 def get_book_service() -> BookService:
     return BookService()
 
-def get_auth_service() -> AuthService:
-    return AuthService()
+def get_user_service() -> UserService:
+    return UserService()
+
+def get_auth_service(user_service :UserService = Depends(get_user_service) ) -> AuthService:
+    return AuthService(user_service)
 
 async def get_current_user(
     db: AsyncSession = Depends(get_session),
     token: str = Depends(oauth2_scheme),
-    auth_service: AuthService = Depends(get_auth_service),
+    user_service: UserService = Depends(get_user_service),
 ) -> User:
     payload = verify_access_token(token)
     if not payload:
@@ -44,7 +48,7 @@ async def get_current_user(
     if not email:
         raise HTTPException( status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token", headers={"WWW-Authenticate" : "Bearer"})
 
-    user = await auth_service.get_user_by_email(db, email)
+    user = await user_service.get_user_by_email(email,db)
     if not user:
         raise HTTPException( status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found", headers= {"WWW-Authenticate" : "Bearer"})
 

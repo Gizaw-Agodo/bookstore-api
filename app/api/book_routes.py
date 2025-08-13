@@ -7,14 +7,19 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.database import get_session
 from app.schemas.books import BookCreate, BookUpdate
 from app.models.user import User
+from app.core.security import role_checker
 
 book_router = APIRouter()
 
-@book_router.get('/', response_model=List[Book], status_code= status.HTTP_200_OK)
+@book_router.get('/',
+                  response_model=List[Book], 
+                  status_code= status.HTTP_200_OK 
+                  )
 async def get_books(
     book_service : BookService = Depends(get_book_service),
     db : AsyncSession = Depends(get_session), 
-    current_user : User = Depends(get_current_user)
+    curr_user : User = Depends(get_current_user), 
+    _:bool =  Depends(role_checker(["user" , "admin"]))
     ):
         books = await book_service.get_all_books(db)
         return books
@@ -32,9 +37,11 @@ async def get_book(
 async def create_book(
         book_data : BookCreate,
         db : AsyncSession = Depends(get_session),
-        book_service : BookService = Depends(get_book_service)       
+        book_service : BookService = Depends(get_book_service) , 
+        curr_user : User = Depends(get_current_user)      
     ):
-        result = await book_service.create_book(db, book_data)
+        
+        result = await book_service.create_book(db, book_data, curr_user.id)
         return result
 
 @book_router.patch('/{book_id}', response_model=Book , status_code=status.HTTP_200_OK)
