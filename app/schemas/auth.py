@@ -16,3 +16,14 @@ class RefreshTokenRequestModel(BaseModel):
 
 class RevokeTokenRequestModel(BaseModel):
     access_token : str
+
+class UserInfo(BaseModel):
+    email: str
+    id: str
+    username: str
+
+class LoginResponse(BaseModel):
+    message: str
+    access_token: str
+    refresh_token: str
+    user: UserInfo

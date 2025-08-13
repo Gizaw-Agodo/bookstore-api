@@ -3,6 +3,9 @@ from datetime import timedelta, datetime, timezone
 from jose import  jwt, JWSError
 from app.core.config import settings
 import uuid
+from app.models.user import User
+from fastapi import Depends, HTTPException, status
+from typing import List
 
 context = CryptContext(schemes=['bcrypt'])
 
@@ -27,6 +30,7 @@ def create_refresh_token(user_data : dict[str, str| datetime |bool ]):
 def verify_access_token(token : str):
     try:
         payload = jwt.decode(token, key = settings.ACCESS_SECRET_KEY, algorithms=settings.ALGORITHM)
+        
         return payload
     except JWSError : 
         return None
@@ -38,4 +42,11 @@ def verify_refresh_token(refresh_token : str):
     except JWSError : 
         return None
 
-        
+
+def role_checker(allowed_roles : List[str] = []) :
+    from app.core.dependencies import get_current_user
+    def wraper(current_user : User = Depends(get_current_user)):
+        if current_user.role in allowed_roles:
+            return True
+        raise HTTPException(status_code= status.HTTP_403_FORBIDDEN, detail="You do not have permission to perform this action")
+    return wraper
