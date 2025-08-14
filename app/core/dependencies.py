@@ -8,6 +8,7 @@ from fastapi.security import OAuth2PasswordBearer
 from app.core.security import verify_access_token
 from app.core.redis import token_in_blocklist
 from app.services.user_service import UserService
+from app.services.review_service import ReviewService
  
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/api/v1/auth/login ')
@@ -20,6 +21,12 @@ def get_user_service() -> UserService:
 
 def get_auth_service(user_service :UserService = Depends(get_user_service) ) -> AuthService:
     return AuthService(user_service)
+
+def get_review_service(
+        user_service:UserService = Depends(get_user_service), 
+        book_service : BookService= Depends(get_book_service)
+        ):
+    return  ReviewService(user_service, book_service)
 
 async def get_current_user(
     db: AsyncSession = Depends(get_session),
