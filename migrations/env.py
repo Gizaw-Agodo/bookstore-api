@@ -9,6 +9,7 @@ from alembic import context
 from app.core.config import settings
 from app.models.user import User # type: ignore
 from app.models.book import Book  # type: ignore
+from app.models.review import Review # type: ignore
 from sqlmodel import SQLModel
 
 # this is the Alembic Config object, which provides
