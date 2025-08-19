@@ -1,5 +1,21 @@
 from pydantic import BaseModel, Field
 from datetime import date
+from uuid import UUID
+from typing import Optional, List
+from datetime import datetime
+from app.schemas.review import ReviewModel
+
+class BookModel(BaseModel) : 
+    id : UUID 
+    title : str 
+    author : str 
+    publisher : str 
+    page_count : int 
+    language : str 
+
+    user_id : Optional[UUID] 
+    created_at: datetime 
+    updated_at : datetime
 
 class BooksResponse(BaseModel) : 
     id : int = Field(...,gt= 0, description="book id must be greater than 0")
@@ -28,4 +44,7 @@ class BookUpdate(BaseModel) :
     published_date : date = Field(..., description="Published date must be in format (yyyy-mm-dd)")
     page_count : int = Field(..., gt = 0 , le=5000, description="Page count must be between 0 and 500")
     language : str 
+
+class BookDetailModel(BookModel):
+    reviews : List[ReviewModel]
 
