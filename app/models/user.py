@@ -7,6 +7,7 @@ from typing import  List, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.models.book import Book
+    from app.models.review import Review
 
 
 
@@ -18,8 +19,10 @@ class User(SQLModel, table = True):
     last_name : str = Field(nullable=True)
     is_verified : bool = Field(default=False)
     password_hash:str = Field(exclude=True)
+    
     role : str = Field(sa_column= Column(pg.VARCHAR, server_default="user"))
     books :List["Book"] = Relationship(back_populates='user')
+    reviews : List["Review"] = Relationship(back_populates='user')
     
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),

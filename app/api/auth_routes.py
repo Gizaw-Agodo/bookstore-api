@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, status
 from app.schemas.auth import UserCreate, UserLoginModel
-from app.core.dependencies import get_auth_service, get_user_service
+from app.core.dependencies import get_auth_service, get_user_service, get_email_service
 from app.services.auth_service import AuthService
+from app.services.email_service import EmailService
 from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.database import get_session
-from app.core.security import  create_token, verify_refresh_token, verify_access_token
+from app.core.security import  create_token, verify_refresh_token, verify_access_token, decode_url_safe_token
 from fastapi.responses import JSONResponse
 from app.schemas.auth import RefreshTokenRequestModel, RevokeTokenRequestModel
 from fastapi import HTTPException
@@ -14,6 +15,10 @@ from app.core.redis import add_jti_to_token_blocklist
 from app.core.security import role_checker
 from app.schemas.auth import LoginResponse, UserInfo
 from app.services.user_service import UserService
+from app.schemas.email import EmailModel
+from app.core.security import create_url_safe_token
+from app.core.config import settings
+from app.schemas.auth import ForgotPasswordModel, ResetPasswordModel
 
 auth_router = APIRouter()
 
@@ -21,10 +26,36 @@ auth_router = APIRouter()
 async def create_user_account(
     user_data : UserCreate,  
     auth_service:AuthService =  Depends(get_auth_service), 
-    db: AsyncSession  =  Depends(get_session)
+    db: AsyncSession  =  Depends(get_session), 
+    email_service : EmailService = Depends(get_email_service)
 ):
+    token = create_url_safe_token({"email": user_data.email})
+    verification_link = f"http://{settings.domain}/verify?token={token}"
+
     new_user = await auth_service.create_user(db, user_data)
+
+    await email_service.send_email(
+        recipients= [new_user.email], 
+        subject="Verify Your account",
+        template_body = {
+            "username" : new_user.username,
+            "verification_link" : verification_link
+            },
+        template_name = "verify_email.html"
+        )
+    
     return new_user
+
+@auth_router.post('verify/{token}')
+async def verify_email_token(
+    token : str,
+    user_service : UserService = Depends(get_user_service), 
+    db : AsyncSession  = Depends(get_session)
+    ):
+    response =  decode_url_safe_token(token)
+    email = response.get('email')
+    await user_service.verify_user(email, db)
+
 
 @auth_router.post('/login', status_code=status.HTTP_200_OK)
 async def user_login(
@@ -33,8 +64,6 @@ async def user_login(
     db : AsyncSession = Depends(get_session)
 ):
     result = await auth_service.login(db, login_data)
-    if not result:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid credentials')
     
     return LoginResponse(
          message= "Login successfull",
@@ -46,6 +75,25 @@ async def user_login(
                 username=result["user"].username,
             )
       )
+
+@auth_router.post('/send-verification-email')
+async def send_verification_email(
+    email_data :EmailModel,
+    email_service:EmailService =  Depends(get_email_service),
+    ):
+
+    await email_service.send_email(
+        recipients= email_data.emails, 
+        subject="Verify Your account",
+        template_body = {
+            "username" : "Gizaw",
+            "verification_link" : "http://localhost/verify"
+            },
+        template_name = "verify.html"
+        )
+    
+    return {"Message" : "Email sent successfully"}
+
 
 
 @auth_router.get('/me')
@@ -92,7 +140,38 @@ async def revoke_token(
 
 
 
+@auth_router.post('/forgot-password')
+async def forgot_password(
+   data : ForgotPasswordModel, 
+   db : AsyncSession = Depends(get_session),
+   user_service : UserService = Depends(get_user_service), 
+   email_service : EmailService = Depends(get_email_service)
+):
+    user = await user_service.get_user_by_email(data.email, db)
+
+    token = create_url_safe_token({"email": data.email})
+    reset_link = f"http://{settings.domain}/api/v1/auth/reset-password?token={token}"
+
+    await email_service.send_email(
+        recipients= [data.email], 
+        subject="Password Reset Request",
+        template_name="reset_password.html",
+        template_body={"username": user.username, "reset_link": reset_link}
+        )
+    
+    return {"Message" : "Password reset email sent successfully"}
 
 
+@auth_router.post('/reset-password/{token}')
+async def reset_password(
+    data : ResetPasswordModel, 
+    token : str,
+    auth_service :AuthService = Depends(get_auth_service),
+    db : AsyncSession = Depends(get_session)
+):
+    response =  decode_url_safe_token(token)
+    email = response.get('email')
+    await auth_service.reset_password(email,data, db)
+    return {"message":"password reseted successfuly"}
 
         

@@ -1,12 +1,16 @@
 from passlib.context import CryptContext
 from datetime import timedelta, datetime, timezone
-from jose import  jwt, JWSError
+from jose import  jwt
+from jose.exceptions import JWTError
 from app.core.config import settings
 import uuid
 from app.models.user import User
 from fastapi import Depends, HTTPException, status
 from typing import List
+from app.core.errors import Unauthorized
+from itsdangerous import URLSafeTimedSerializer
 
+serializer = URLSafeTimedSerializer( secret_key=settings.ACCESS_SECRET_KEY)
 context = CryptContext(schemes=['bcrypt'])
 
 def hash_password(password : str):
@@ -30,18 +34,17 @@ def create_refresh_token(user_data : dict[str, str| datetime |bool ]):
 def verify_access_token(token : str):
     try:
         payload = jwt.decode(token, key = settings.ACCESS_SECRET_KEY, algorithms=settings.ALGORITHM)
-        
         return payload
-    except JWSError : 
-        return None
+    
+    except JWTError : 
+        raise Unauthorized('Invalide or expired token')
 
 def verify_refresh_token(refresh_token : str):
     try:
         payload = jwt.decode(refresh_token, key = settings.REFRESH_SECRET_KEY, algorithms=settings.ALGORITHM)
         return payload
-    except JWSError : 
-        return None
-
+    except JWTError : 
+        raise Unauthorized('Invalide or expired token')
 
 def role_checker(allowed_roles : List[str] = []) :
     from app.core.dependencies import get_current_user
@@ -50,3 +53,18 @@ def role_checker(allowed_roles : List[str] = []) :
             return True
         raise HTTPException(status_code= status.HTTP_403_FORBIDDEN, detail="You do not have permission to perform this action")
     return wraper
+
+def create_url_safe_token(data : dict[str,str]):
+    try : 
+        token = serializer.dumps(data, salt='email-confirm-salt' )
+        return token
+    except:
+        return None
+
+def decode_url_safe_token(token:str):
+    try : 
+        result = serializer.loads(token)
+        return result
+    except:
+        raise Unauthorized('Invalide or expired token')
+

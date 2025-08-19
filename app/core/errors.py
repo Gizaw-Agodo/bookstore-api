@@ -33,4 +33,5 @@ class InternalServerError(CoreError):
 class ServiceUnavailable(CoreError):
     status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
-
+class EmailSendingError(CoreError):
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
